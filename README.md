@@ -1,4 +1,6 @@
-# 🛡️ NSE Sentinel
+# 🛡️ NSE Sentinel 
+
+FOR REVIEW - https://nse-sentinel-v35-7xe2n7dx339kxca8zirkcq.streamlit.app/
 
 **Production-grade NSE stock screener and decision engine built with Python + Streamlit.**
 
