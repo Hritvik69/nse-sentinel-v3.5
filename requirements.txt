@@ -2,6 +2,7 @@
 # NSE SENTINEL — Python Dependencies
 # Install: pip install -r requirements.txt
 # Run:     streamlit run app.py
+#run this URL to review - https://nse-sentinel-v35-7xe2n7dx339kxca8zirkcq.streamlit.app/
 # ═══════════════════════════════════════════════════════════════════
 
 # ── Web UI ───────────────────────────────────────────────────────────
