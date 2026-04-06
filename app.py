@@ -331,43 +331,184 @@ hr { border-color:var(--border) !important; }
 # ─────────────────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_nse_tickers() -> list:
-    tickers = set()
-    headers = {"User-Agent": "Mozilla/5.0"}
+    # ── COMPREHENSIVE STATIC UNIVERSE (always merged — cloud-safe) ────
+    # This list is ALWAYS added regardless of whether live fetch succeeds.
+    # Covers Nifty 50, Next 50, Midcap 150, Smallcap 250 + sector leaders.
+    _STATIC_UNIVERSE = [
+        # ── Nifty 50 ──────────────────────────────────────────────────
+        "RELIANCE","TCS","HDFCBANK","INFY","ICICIBANK","HINDUNILVR","SBIN",
+        "BHARTIARTL","ITC","KOTAKBANK","LT","AXISBANK","ASIANPAINT","MARUTI",
+        "BAJFINANCE","HCLTECH","SUNPHARMA","TITAN","ULTRACEMCO","ONGC",
+        "NESTLEIND","WIPRO","POWERGRID","NTPC","TECHM","INDUSINDBK","ADANIPORTS",
+        "TATAMOTORS","JSWSTEEL","BAJAJFINSV","HINDALCO","GRASIM","DIVISLAB",
+        "CIPLA","DRREDDY","BPCL","EICHERMOT","APOLLOHOSP","TATACONSUM","BRITANNIA",
+        "COALINDIA","HEROMOTOCO","SHREECEM","SBILIFE","HDFCLIFE","ADANIENT",
+        "BAJAJ-AUTO","TATASTEEL","UPL","M&M",
+        # ── Nifty Next 50 ─────────────────────────────────────────────
+        "VEDL","BHEL","NMDC","SAIL","GAIL","IOC","HPCL","RECLTD","PFC","IRFC",
+        "NHPC","SJVN","PIDILITIND","BERGEPAINT","HAVELLS","VOLTAS","POLYCAB",
+        "MOTHERSON","BOSCHLTD","EXIDEIND","BALKRISHIND","MRF","APOLLOTYRE",
+        "TVSMOTORS","PAGEIND","MUTHOOTFIN","CHOLAFIN","MANAPPURAM","AUBANK",
+        "FEDERALBNK","IDFCFIRSTB","BANDHANBNK","RBLBANK","YESBANK",
+        "PNB","CANBK","UNIONBANK","KARURVYSYA","DCBBANK","CITYUNIONB",
+        "OBEROIRLTY","GODREJPROP","DLF","PRESTIGE","PHOENIXLTD","BRIGADE",
+        "SOBHA","KOLTEPATIL","SUNTECK","LODHA",
+        # ── IT / Tech ─────────────────────────────────────────────────
+        "LTTS","PERSISTENT","COFORGE","MPHASIS","TATAELXSI","KPITTECH",
+        "ZENSAR","RATEGAIN","NAUKRI","IRCTC","ZOMATO","DELHIVERY","PAYTM",
+        "POLICYBZR","NYKAA","CARTRADE","ANGELONE","HAPPSTMNDS","TANLA",
+        "MASTEK","INTELLECT","NEWGEN","OFSS","ORACLE","CYIENT","SASKEN",
+        "BIRLASOFT","HEXAWARE","SONACOMS","DATAMATICS",
+        # ── Pharma / Healthcare ───────────────────────────────────────
+        "AUROPHARMA","LUPIN","TORNTPHARM","ALKEM","IPCALAB","NATCOPHARM",
+        "GRANULES","GLAND","LAURUS","BIOCON","ZYDUSLIFE","MANKIND","IPCA",
+        "SUNPHARMA","DRREDDY","CIPLA","DIVISLAB","APOLLOHOSP","FORTIS",
+        "MAXHEALTH","MEDANTA","RAINBOW","KIMS","VIJAYABANK","JBCHEPHARM",
+        "SYNGENE","PIRAMALPHARM","GLENMARK","WOCKHARDT","SOLARA",
+        # ── Banking / NBFC / Fintech ──────────────────────────────────
+        "SHRIRAMFIN","MFSL","ICICIGI","HDFCGI","STARHEALTH","NIACL","GICRE",
+        "IIFL","MOTILALOFS","APTUS","AAVAS","CANFINHOME","LICHSGFIN",
+        "PNBHOUSING","REPCO","HOMEFIRST","CREDITACC","UJJIVANSFB","EQUITASBNK",
+        "SURYODAY","ESAFSFB","UTKARSHBNK","JANA","SBFC","UGROCAP",
+        "MASFIN","BAJFINANCE","BAJAJFINSV","CHOLAFIN","MUTHOOTFIN","MANAPPURAM",
+        "ABCAPITAL","ADANIFINANCE","POONAWALLA","LICI","SBICARD","BAJAJHFL",
+        # ── Auto & Auto Ancillary ─────────────────────────────────────
+        "FINOLEX","TATAMOTORS","MARUTI","M&M","HEROMOTOCO","BAJAJ-AUTO",
+        "EICHERMOT","TVSMOTORS","ASHOKLEY","TATAELEXI","SUNDRMFAST",
+        "MINDAIND","BOSCHLTD","MOTHERSON","EXIDEIND","AMARARAJA","LUMAXTECH",
+        "CRAFTSMAN","SUPRAJIT","FIEM","ENDURANCE","GABRIEL","JAMNA",
+        "SWARAJENG","ESCORTS","FORCE","TIINDIA","ZFCVINDIA","SCHAEFFLER",
+        # ── Metals & Mining ───────────────────────────────────────────
+        "TATASTEEL","JSWSTEEL","HINDALCO","VEDL","SAIL","NMDC","COALINDIA",
+        "MOIL","RATNAMANI","APL","JINDALSAW","WELSPUNLIV","SRFLTD","SHYAMMETL",
+        "HINDZINC","HINDCOPPER","NALCO","GMRINFRA","NBCC","IRCON",
+        # ── Energy / Oil & Gas ────────────────────────────────────────
+        "RELIANCE","ONGC","BPCL","IOC","HPCL","GAIL","PETRONET","IGL","MGL",
+        "GUJGASLTD","TATAPOWER","NTPC","POWERGRID","ADANIGREEN","ADANITRANS",
+        "CESC","TORNTPOWER","TATAPOWER","NHPC","SJVN","IREDA","RPOWER",
+        "JSWENERGY","GREENKO","ACME","INOXWIND","SUZLON","ORIENTGREEN",
+        # ── FMCG / Consumer ───────────────────────────────────────────
+        "HINDUNILVR","ITC","NESTLEIND","BRITANNIA","TATACONSUM","MARICO",
+        "GODREJCP","DABUR","EMAMILTD","COLPAL","PGHH","JYOTHYLAB","BAJAJCON",
+        "GILLETTE","HENKEL","JUBLPHARMA","MCCOY","ROSSARI",
+        # ── Retail / Consumer Disc ────────────────────────────────────
+        "TRENT","DMART","WESTLIFE","JUBLFOOD","DEVYANI","DIXON","AMBER",
+        "SHOPERSTOP","VMART","BATAINDIA","RELAXO","METRO","BATA","KPRMILL",
+        "PAGEIND","ADITYA","VEDANT","MANYAVAR","GOKALDAS","GRASIM",
+        # ── Chemicals & Specialty ─────────────────────────────────────
+        "PIDILITIND","ALKYLAMINE","ASTRAL","SUPREMEIND","AAVAS","DEEPAKNTR",
+        "NAVINFLUOR","TATACHEM","GNFC","GHCL","VINATI","AARTI","AARTIIND",
+        "CLEAN","FINEORG","GALAXYSURF","HFCL","IGPL","NOCIL","PCBL",
+        "SUDARSCHEM","THIRUMALCHEM","CAMLIN","MEGHMANI","TATACHEM","FILATEX",
+        # ── Infrastructure / Capital Goods ────────────────────────────
+        "LT","SIEMENS","ABB","BHEL","THERMAX","CUMMINSIND","ELGIEQUIP",
+        "KEC","KALPATPOWR","APLAPOLLO","GRINDWELL","TIMKEN","SKF","SCHAEFFLER",
+        "IRCON","NBCC","RVNL","HGINFRA","PNC","KNR","ASHOKA","PATELENG",
+        "ITD","CAPACITE","SPTL","GPPL","CONCOR","ALLCARGO",
+        # ── Real Estate ───────────────────────────────────────────────
+        "DLF","OBEROIRLTY","GODREJPROP","PHOENIXLTD","BRIGADE","SOBHA",
+        "KOLTEPATIL","SUNTECK","LODHA","PRESTIGE","MAHINDRALIFE","ARVINDFASHN",
+        "PURVA","AHLUCONT","NESCO","IBREALEST","INDIABULLS",
+        # ── Telecom / Media ───────────────────────────────────────────
+        "BHARTIARTL","VODAFONEIDEA","TATACOMM","RAILTEL","HFCL","STLTECH",
+        "TTML","INDUSTOWER","GTLINFRA","OPTIEMUS","VINDHYATEL",
+        # ── Cement ────────────────────────────────────────────────────
+        "ULTRACEMCO","SHREECEM","AMBUJACEM","ACC","RAMCOCEM","DALMIACEM",
+        "HEIDELBERG","JKCEMENT","JKLAKSHMI","STARCEMENT","BIRLAMADHAV",
+        "BIRLACORPN","INDIACEM","SANGHI","PRISM",
+        # ── Textiles / Apparel ────────────────────────────────────────
+        "PAGEIND","WELSPUNLIV","TRIDENT","VARDHACRLC","ALOKTEXT","SPANDEX",
+        "NITIN","RUPA","NANDAN","SPORTKING","RAYMOND","SIYARAM","VIPIND",
+        # ── Logistics / Aviation ──────────────────────────────────────
+        "DELHIVERY","ALLCARGO","GATI","TCI","MAHINDRA","BLUEDART","DTDC",
+        "INDIAMART","MAPMYINDIA","INTERGLOBE","SPICEJET","GMRAIRPORT",
+        # ── Paper / Packaging ─────────────────────────────────────────
+        "ITC","TNPL","WESTERNINDIA","SHRIRAMPOLY","UFLEX","MOLD-TEK","HUHTAMAKI",
+        # ── Agri / Fertilisers ────────────────────────────────────────
+        "UPL","DHANUKA","BAYER","RALLIS","PARADEEP","COROMANDEL","GSFC",
+        "GNFC","NFL","RCF","CFCL","CHAMBAL","IFFCO",
+        # ── Hotels / Tourism ──────────────────────────────────────────
+        "IRCTC","LEMON","MAHINDRAHOLIDAY","CHALET","DEVYANI","JUBLFOOD",
+        "EIHLTD","TAJGVK","INDHOTEL","ITCHOTELS",
+        # ── Defence / Aerospace ───────────────────────────────────────
+        "HAL","BEL","BHEL","PARAS","MTAR","ASTRA","GRSE","COCHINSHIP",
+        "MAZAGON","GARDENSIL","DYNAMATECH","PARAS","ZENTEC",
+        # ── Misc large / mid caps ─────────────────────────────────────
+        "GREENPLY","GREENLAM","ATUL","BAJAJELEC","CROMPTON","ORIENTELEC",
+        "HAVELLS","SYSKA","BAJAJHHL","WHIRLPOOL","VOLTAS","BLUESTAR",
+        "HINDWAREAP","CERA","KAJARIA","SOMANYCER","ORIENTCEREM",
+        "ASTERDM","METROPOLIS","THYROCARE","REDCLIFFE","KRSNAA",
+        "BIKAJI","PRATAAP","AGRO","VARUN","HATSUN","HERITGFOOD",
+        "PARAS","SANOFI","PFIZER","ABBOTINDIA","GSK","NOVARTIS",
+        "3MINDIA","HONAUT","GILLETTE","PGHH",
+        "MPHASIS","ECLERX","FIRSTSOURCE","IGATE","MASTEK","NIIT",
+        "HEXAWARE","SONACOMS","DATAMATICS","ZENSAR","RATEGAIN",
+    ]
 
-    for days_back in range(0, 7):
-        try:
-            dt = datetime.now() - timedelta(days=days_back)
-            if dt.weekday() >= 5:
+    tickers = set(f"{s}.NS" for s in _STATIC_UNIVERSE)
+
+    # ── LIVE FETCH — NSE bhav copy (needs proper session/cookie) ─────
+    _NSE_HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://www.nseindia.com/",
+        "DNT": "1",
+        "Connection": "keep-alive",
+    }
+
+    # Step 1: Warm up NSE session (get cookies) then fetch EQUITY_L
+    try:
+        session = requests.Session()
+        session.headers.update(_NSE_HEADERS)
+        session.get("https://www.nseindia.com/", timeout=10)  # warm-up for cookies
+        r = session.get(
+            "https://archives.nseindia.com/content/equities/EQUITY_L.csv",
+            timeout=15,
+        )
+        if r.status_code == 200 and len(r.content) > 5000:
+            df = pd.read_csv(io.StringIO(r.text))
+            col = "SYMBOL" if "SYMBOL" in df.columns else df.columns[0]
+            for s in df[col].dropna().unique():
+                tickers.add(f"{str(s).strip()}.NS")
+    except Exception:
+        pass
+
+    # Step 2: Try bhav copy (daily snapshot — 2000+ tickers when accessible)
+    if len(tickers) < 500:
+        for days_back in range(0, 7):
+            try:
+                dt = datetime.now() - timedelta(days=days_back)
+                if dt.weekday() >= 5:
+                    continue
+                date_str = dt.strftime("%d%b%Y").upper()
+                url = (
+                    f"https://archives.nseindia.com/content/historical/EQUITIES/"
+                    f"{dt.year}/{dt.strftime('%b').upper()}/cm{date_str}bhav.csv.zip"
+                )
+                r = requests.get(url, headers=_NSE_HEADERS, timeout=15)
+                if r.status_code == 200 and len(r.content) > 1000:
+                    z  = zipfile.ZipFile(io.BytesIO(r.content))
+                    df = pd.read_csv(z.open(z.namelist()[0]))
+                    for s in df["SYMBOL"].dropna().unique():
+                        tickers.add(f"{s.strip()}.NS")
+                    break
+            except Exception:
                 continue
-            date_str = dt.strftime("%d%b%Y").upper()
-            url = (
-                f"https://archives.nseindia.com/content/historical/EQUITIES/"
-                f"{dt.year}/{dt.strftime('%b').upper()}/cm{date_str}bhav.csv.zip"
+
+    # Step 3: Try Nifty 500 index list as further supplement
+    if len(tickers) < 500:
+        try:
+            r = requests.get(
+                "https://archives.nseindia.com/content/indices/ind_nifty500list.csv",
+                headers=_NSE_HEADERS,
+                timeout=12,
             )
-            r = requests.get(url, headers=headers, timeout=12)
-            if r.status_code == 200:
-                z  = zipfile.ZipFile(io.BytesIO(r.content))
-                df = pd.read_csv(z.open(z.namelist()[0]))
-                for s in df["SYMBOL"].dropna().unique():
-                    tickers.add(f"{s.strip()}.NS")
-                break
-        except Exception:
-            continue
-
-    if len(tickers) < 100:
-        try:
-            r = requests.get("https://archives.nseindia.com/content/equities/EQUITY_L.csv", headers=headers, timeout=12)
-            if r.status_code == 200:
-                df  = pd.read_csv(io.StringIO(r.text))
-                col = "SYMBOL" if "SYMBOL" in df.columns else df.columns[0]
-                for s in df[col].dropna().unique():
-                    tickers.add(f"{str(s).strip()}.NS")
-        except Exception:
-            pass
-
-    if len(tickers) < 100:
-        try:
-            r = requests.get("https://archives.nseindia.com/content/indices/ind_nifty500list.csv", headers=headers, timeout=12)
             if r.status_code == 200:
                 df  = pd.read_csv(io.StringIO(r.text))
                 col = "Symbol" if "Symbol" in df.columns else df.columns[1]
@@ -375,38 +516,6 @@ def fetch_nse_tickers() -> list:
                     tickers.add(f"{str(s).strip()}.NS")
         except Exception:
             pass
-
-    if len(tickers) < 200:
-        fallback = [
-            "RELIANCE","TCS","HDFCBANK","INFY","ICICIBANK","HINDUNILVR","SBIN",
-            "BHARTIARTL","ITC","KOTAKBANK","LT","AXISBANK","ASIANPAINT","MARUTI",
-            "BAJFINANCE","HCLTECH","SUNPHARMA","TITAN","ULTRACEMCO","ONGC",
-            "NESTLEIND","WIPRO","POWERGRID","NTPC","TECHM","INDUSINDBK","ADANIPORTS",
-            "TATAMOTORS","JSWSTEEL","BAJAJFINSV","HINDALCO","GRASIM","DIVISLAB",
-            "CIPLA","DRREDDY","BPCL","EICHERMOT","APOLLOHOSP","TATACONSUM","BRITANNIA",
-            "COALINDIA","HEROMOTOCO","SHREECEM","SBILIFE","HDFCLIFE","ADANIENT",
-            "BAJAJ-AUTO","TATASTEEL","UPL","M&M","VEDL","BHEL","NMDC","SAIL",
-            "GAIL","IOC","HPCL","RECLTD","PFC","IRFC","NHPC","SJVN",
-            "PIDILITIND","BERGEPAINT","HAVELLS","VOLTAS","POLYCAB","FINOLEX",
-            "MOTHERSON","BOSCHLTD","EXIDEIND","BALKRISHIND","MRF","APOLLOTYRE",
-            "TVSMOTORS","PAGEIND","MUTHOOTFIN","CHOLAFIN","MANAPPURAM","AUBANK",
-            "FEDERALBNK","IDFCFIRSTB","BANDHANBNK","RBLBANK","YESBANK",
-            "PNB","CANBK","UNIONBANK","KARURVYSYA","DCBBANK","CITYUNIONB",
-            "LTTS","PERSISTENT","COFORGE","MPHASIS","TATAELXSI","KPITTECH",
-            "ZENSAR","RATEGAIN","NAUKRI","IRCTC","ZOMATO","DELHIVERY",
-            "AUROPHARMA","LUPIN","TORNTPHARM","ALKEM","IPCALAB","NATCOPHARM",
-            "GRANULES","GLAND","LAURUS","BIOCON","ZYDUSLIFE","MANKIND",
-            "ASTRAL","SUPREMEIND","ALKYLAMINE","AAVAS","CANFINHOME","LICHSGFIN",
-            "PNBHOUSING","APTUS","TATAPOWER","CESC","TORNTPOWER","ADANIGREEN",
-            "GUJGASLTD","IGL","MGL","PETRONET","GREENPLY","GREENLAM",
-            "TRENT","DMART","WESTLIFE","JUBLFOOD","DEVYANI","DIXON","AMBER",
-            "PRESTIGE","DLF","OBEROIRLTY","GODREJPROP","PHOENIXLTD","BRIGADE",
-            "SOBHA","KOLTEPATIL","SUNTECK","SHRIRAMFIN","MFSL","ICICIGI",
-            "HDFCGI","STARHEALTH","NIACL","GICRE","IIFL","MOTILALOFS",
-            "ANGELONE","PAYTM","POLICYBZR","NYKAA","CARTRADE",
-        ]
-        for s in fallback:
-            tickers.add(f"{s}.NS")
 
     return sorted(list(tickers))
 
